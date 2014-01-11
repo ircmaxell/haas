@@ -58,7 +58,11 @@ func handleGroupHug(w http.ResponseWriter, r *http.Request) {
     }
     to := parseCommaSeparatedString(names[0])
     from := parseCommaSeparatedString(names[1])
-    hug := HugRequest{to, from, hug_GroupHug}
+    t := hug_Hug
+    if strings.Contains(names[1], ",") {
+        t = hug_GroupHug
+    }
+    hug := HugRequest{to, from, t}
     sendResponse(w, r, hug)
 }
 
