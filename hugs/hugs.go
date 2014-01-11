@@ -15,7 +15,8 @@ type ResponseType int
 
 const (
     hug_Hug HugType = iota
-    type_BearHug
+    hug_BearHug
+    hug_GroupHug
 )
 
 const (
@@ -36,6 +37,7 @@ type jsonResponse struct {
 func init() {
     http.HandleFunc("/hug/", handleHug)
     http.HandleFunc("/bearhug/", handleBearHug)
+    http.HandleFunc("/grouphug/", handleGroupHug)
 }
 
 func handleHug(w http.ResponseWriter, r *http.Request) {
@@ -48,13 +50,34 @@ func handleHug(w http.ResponseWriter, r *http.Request) {
     sendResponse(w, r, hug)
 }
 
+func handleGroupHug(w http.ResponseWriter, r *http.Request) {
+    names := extractNames("/grouphug/", r)
+    if len(names) < 2 {
+        send400(w)
+        return
+    }
+    to := parseCommaSeparatedString(names[0])
+    from := parseCommaSeparatedString(names[1])
+    hug := HugRequest{to, from, hug_GroupHug}
+    sendResponse(w, r, hug)
+}
+
+func parseCommaSeparatedString(in string) string {
+    if !strings.Contains(in, ",") {
+        return in
+    }
+    parts := strings.Split(in, ",")
+    list := strings.Join(parts[0:len(parts)-1], ", ")
+    return fmt.Sprintf("%s and %s", list, parts[len(parts)-1])
+}
+
 func handleBearHug(w http.ResponseWriter, r *http.Request) {
     names := extractNames("/bearhug/", r)
     if len(names) < 2 {
         send400(w)
         return
     }
-    hug := HugRequest{names[0], names[1], type_BearHug}
+    hug := HugRequest{names[0], names[1], hug_BearHug}
     sendResponse(w, r, hug)
 }
 
@@ -137,8 +160,10 @@ func getTemplateName(hug HugType, resp ResponseType) string {
     switch hug {
         case hug_Hug:
             hug_type = "hug"
-        case type_BearHug:
+        case hug_BearHug:
             hug_type = "bearhug"
+        case hug_GroupHug:
+            hug_type = "grouphug"
     }
     return fmt.Sprintf("templates/%s_%s", resp_type, hug_type)  
 }
