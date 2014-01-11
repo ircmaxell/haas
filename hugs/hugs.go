@@ -137,8 +137,18 @@ func executeTemplate(w io.Writer, templateName string, hug HugRequest) {
     }
 }
 
+func getHeaderOverride(header string, r *http.Request) string {
+    value := r.Header.Get(header)
+    r.ParseForm()
+    tmp := r.Form.Get(header)
+    if tmp != "" {
+        return tmp
+    }
+    return value
+}
+
 func determineResponseType(r *http.Request) ResponseType {
-    accept := r.Header.Get("Accept")
+    accept := getHeaderOverride("Accept", r)
     parts := strings.Split(accept, ",")
     for _, t := range parts {
         switch {
