@@ -1,0 +1,13 @@
+<html>
+	<head>
+		<title>HUGS!</title>
+		<link href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet" />
+	</head>
+	<body>
+		<div class="container">
+			<div class="hero-unit">
+				<h1>{{.From}} Sends {{.To}} A Bear Hug!!!</h1>
+			</div>
+		</div>
+	</body>
+</html>

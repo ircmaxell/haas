@@ -1,0 +1,22 @@
+application: hugsasaservice
+version: 1
+runtime: go
+api_version: go1
+
+handlers:
+- url: /
+  static_files: index.html
+  upload: index.html
+- url: /.*
+  script: _go_app
+
+pagespeed:
+  domains_to_rewrite:
+  - hugsasaservice.appspot.com
+  enabled_rewriters:
+  - MinifyCss
+  - CombineCss
+  - ProxyCss
+  - ProxyJs
+  - JsOptimize
+  - CombineJs

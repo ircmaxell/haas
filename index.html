@@ -1,0 +1,35 @@
+<html>
+	<head>
+		<title>Hugs As A Service</title>
+		<link href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet" />
+	</head>
+	<body>
+		<div class="container">
+			<div class="hero-unit">
+				<h1>HAAS</h1>
+				<h2>Hugs As A Service</h2>
+				<p><em>v0.0.1</em></p>
+			</div>
+		</div>
+		<div class="container">
+			<div class="content" style="margin-left:50px;">
+				<h2 id="introduction">Introduction</h2>
+				<p>HAAS (Hugs As A Service) provides a modern, RESTful, scalable solution to the common problem of sending people virtual hugs.</p>
+				<h2 id="contentnegotiation">Content Negotiation</h2>
+				<p>HAAS will respond to the following 'Accept:' values with appropriate content</p>
+				<ul>
+					<li>text/plain - Content will be returned as a plain string.</li>
+					<li>application/json - Content will be returned as a JSON object { message: 'message'}</li>
+					<li>text/html - Content will be returned as an HTML page with a twitter bootstrap hero unit, containing the message</li>
+				</ul>
+				<h2 id="api">API</h2>
+				<h3 id="hug">/hug/:name/:from</h3>
+				<p>Will return content of the form ":name, :from Sends You A HUG!!!", e.g. /hug/Sam/Bill will return 'Sam, Bill Sends You A HUG!!!'</p>
+				<h3 id="bearhug">/bearhug/:name/:from</h3>
+				<p>Will return content of the form ":from Sends :name A Bear Hug!!!", e.g. /bearhug/Sam/Bill will return 'Bill Sends Sam A Bear Hug!!!'</p>
+			
+				<p>All contributions are very welcome</p>
+			</div>
+		</div>
+	</body>
+</html>
