@@ -12,8 +12,8 @@
 	<body>
 		<div class="container">
 			<div class="hero-unit">
-				<h1>{{.To}};</h1>
-				<h2>{{.From}} Send You A HUG!!!</h2>
+				<h1>{{html .To}};</h1>
+				<h2>{{html .From}} Send You A HUG!!!</h2>
 			</div>
 		</div>
 		<script>

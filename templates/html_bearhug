@@ -12,7 +12,7 @@
 	<body>
 		<div class="container">
 			<div class="hero-unit">
-				<h1>{{.From}} Sends {{.To}} A Bear Hug!!!</h1>
+				<h1>{{html .From}} Sends {{html .To}} A Bear Hug!!!</h1>
 			</div>
 		</div>
 		<script>
