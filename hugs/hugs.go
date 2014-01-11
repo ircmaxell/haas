@@ -6,7 +6,8 @@ import (
     "fmt"
     "strings"
     "net/http"
-    "text/template"
+    textTemplate "text/template"
+    htmlTemplate "html/template"
     "encoding/json"
 )
 
@@ -127,7 +128,22 @@ func sendResponseJSON(w http.ResponseWriter, hug HugRequest) {
 }
 
 func executeTemplate(w io.Writer, templateName string, hug HugRequest) {
-    tmpl, err := template.ParseFiles(templateName)
+    if strings.Contains(templateName, "html") {
+        executeHTMLTemplate(w, templateName, hug)
+        return
+    }
+    tmpl, err := textTemplate.ParseFiles(templateName)
+    if err != nil {
+        panic(err)
+    }
+    err = tmpl.Execute(w, hug)
+    if err != nil {
+        panic(err)
+    }
+}
+
+func executeHTMLTemplate(w io.Writer, templateName string, hug HugRequest) {
+    tmpl, err := htmlTemplate.ParseFiles(templateName)
     if err != nil {
         panic(err)
     }
