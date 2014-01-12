@@ -1,0 +1,48 @@
+<html>
+	<head>
+		<title>HUG Attack!!!</title>
+		<link href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet" />
+		<style type="text/css">
+			.hero-unit {
+				border-top-left-radius: 0;
+				border-top-right-radius: 0;
+			}
+			body {
+				overflow: hidden;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<div class="hero-unit">
+				<h1>{{.To}},</h1>
+				<h2>HUG Attack!!!</h2>
+			</div>
+			<div id="hugs">
+				<script type="text/javascript">
+					(function() {
+						var hugs = document.getElementById("hugs");
+						setInterval(function() {
+							var hug = document.createElement("h" + (Math.floor(Math.random() * 5) + 1));
+							hug.appendChild(document.createTextNode("Hug!"));
+							hug.style.position = "absolute";
+							hug.style.top = Math.floor(Math.random() * window.innerHeight) + "px";
+							hug.style.left = Math.floor(Math.random() * window.innerWidth) + "px";
+							hugs.appendChild(hug);
+						}, 100);
+					})()
+				</script>
+			</div>
+		</div>
+		<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-47059781-1', 'hugsasaservice.appspot.com');
+  ga('send', 'pageview');
+
+</script>
+	</body>
+</html>

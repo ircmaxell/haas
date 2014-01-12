@@ -18,6 +18,7 @@ const (
     hug_Hug HugType = iota
     hug_BearHug
     hug_GroupHug
+    hug_HugAttack
 )
 
 const (
@@ -39,6 +40,7 @@ func init() {
     http.HandleFunc("/hug/", handleHug)
     http.HandleFunc("/bearhug/", handleBearHug)
     http.HandleFunc("/grouphug/", handleGroupHug)
+    http.HandleFunc("/hugattack/", handleHugAttack)
 }
 
 func handleHug(w http.ResponseWriter, r *http.Request) {
@@ -48,6 +50,16 @@ func handleHug(w http.ResponseWriter, r *http.Request) {
         return
     }
     hug := HugRequest{names[0], names[1], hug_Hug}
+    sendResponse(w, r, hug)
+}
+
+func handleHugAttack(w http.ResponseWriter, r *http.Request) {
+    names := extractNames("/hugattack/", r)
+    if len(names) < 1 {
+        send400(w)
+        return
+    }
+    hug := HugRequest{names[0], "", hug_HugAttack}
     sendResponse(w, r, hug)
 }
 
@@ -194,6 +206,8 @@ func getTemplateName(hug HugType, resp ResponseType) string {
             hug_type = "bearhug"
         case hug_GroupHug:
             hug_type = "grouphug"
+        case hug_HugAttack:
+            hug_type = "hugAttack"
     }
     return fmt.Sprintf("templates/%s_%s", resp_type, hug_type)  
 }
