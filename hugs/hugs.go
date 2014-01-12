@@ -14,7 +14,8 @@ import (
 type Formatter struct {
     Name string
     ContentType string
-    Render func(HugRequest, io.Writer)
+    GetTemplate func(hug HugRequest) TemplateExecute
+    Render func(TemplateExecute, HugRequest, io.Writer)
 }
 
 type HugHandler struct {
@@ -37,13 +38,24 @@ type Configuration struct {
     Formatters map[string]Formatter
 }
 
+type TemplateExecute interface {
+    Execute(io.Writer, interface{}) error
+}
+
+func init() {
+    config := Configuration{declareHandlers(), declareFormatters()}
+    for _, handler := range config.Handlers {
+        http.HandleFunc(handler.Path, getHandler(handler, config))
+    }
+}
+
 func declareFormatters() map[string]Formatter {
     formatters := map[string]Formatter{
-        "html": {"html", "text/html", renderText},
-        "text": {"text", "text/plain", renderHtml},
-        "json": {"json", "application/json", func(hug HugRequest, w io.Writer) {
+        "html": {"html", "text/html", getHtmlTemplate, renderDefault},
+        "text": {"text", "text/plain", getTextTemplate, renderDefault},
+        "json": {"json", "application/json", getTextTemplate, func(tmpl TemplateExecute, hug HugRequest, w io.Writer) {
             var writeBuffer bytes.Buffer
-            renderText(hug, &writeBuffer)
+            renderDefault(tmpl, hug, &writeBuffer)
             encoder := json.NewEncoder(w)
             encoder.Encode(map[string]string {
                 "message": writeBuffer.String(),
@@ -90,13 +102,6 @@ func declareHandlers() map[string]HugHandler {
     return handlers
 }
 
-func init() {
-    config := Configuration{declareHandlers(), declareFormatters()}
-    for _, handler := range config.Handlers {
-        http.HandleFunc(handler.Path, getHandler(handler, config))
-    }
-}
-
 func getHandler(h HugHandler, config Configuration) func(http.ResponseWriter, *http.Request) {
     return func(w http.ResponseWriter, r *http.Request) {
         path := r.URL.Path[len(h.Path):]
@@ -121,7 +126,7 @@ func getHandler(h HugHandler, config Configuration) func(http.ResponseWriter, *h
 func handleGenericHug(hug HugRequest, w http.ResponseWriter) {
     formatter := findFormatter(hug)
     w.Header().Set("Content-Type", formatter.Name)
-    formatter.Render(hug, w)
+    formatter.Render(formatter.GetTemplate(hug), hug, w)
 }
 
 func parseCommaSeparatedString(in string) string {
@@ -156,24 +161,26 @@ func findFormatter(hug HugRequest) Formatter {
     return hug.Config.Formatters["html"]
 }
 
-func renderHtml(hug HugRequest, w io.Writer) {
-    tmpl, err := htmlTemplate.ParseFiles(fmt.Sprintf("templates/%s.html", hug.Template))
+func handleTemplateError(err error) {
     if err != nil {
-        panic(err)
-    }
-    err = tmpl.Execute(w, hug)
-    if err != nil {
+        // TODO: Actually handle the error!!! :-D
         panic(err)
     }
 }
 
-func renderText(hug HugRequest, w io.Writer) {
+func renderDefault(tmpl TemplateExecute, hug HugRequest, w io.Writer) {
+    err := tmpl.Execute(w, hug)
+    handleTemplateError(err)
+}
+
+func getTextTemplate(hug HugRequest) TemplateExecute {
     tmpl, err := textTemplate.ParseFiles(fmt.Sprintf("templates/%s.text", hug.Template))
-    if err != nil {
-        panic(err)
-    }
-    err = tmpl.Execute(w, hug)
-    if err != nil {
-        panic(err)
-    }
+    handleTemplateError(err)
+    return tmpl
+}
+
+func getHtmlTemplate(hug HugRequest) TemplateExecute {
+    tmpl, err := htmlTemplate.ParseFiles(fmt.Sprintf("templates/%s.html", hug.Template))
+    handleTemplateError(err)
+    return tmpl   
 }
