@@ -207,7 +207,7 @@ func getTemplateName(hug HugType, resp ResponseType) string {
         case hug_GroupHug:
             hug_type = "grouphug"
         case hug_HugAttack:
-            hug_type = "hugAttack"
+            hug_type = "hugattack"
     }
     return fmt.Sprintf("templates/%s_%s", resp_type, hug_type)  
 }
