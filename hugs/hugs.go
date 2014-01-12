@@ -1,7 +1,6 @@
 package main
 
 import (
-    "io"
     "bytes"
     "fmt"
     "strings"
@@ -11,72 +10,144 @@ import (
     "encoding/json"
 )
 
-type HugType int
-type ResponseType int
+type Formatter struct {
+    AcceptText string
+    Render func(HugRequest, http.ResponseWriter)
+}
 
-const (
-    hug_Hug HugType = iota
-    hug_BearHug
-    hug_GroupHug
-    hug_HugAttack
-)
-
-const (
-    response_HTML ResponseType = iota
-    response_Text
-    response_JSON
-)
+type HugHandler struct {
+    Path string
+    Handler func(HugRequest, http.ResponseWriter)
+    Template string
+    MinNames int
+}
 
 type HugRequest struct {
     To, From string
-    Hug HugType
+    Request *http.Request
+    Handler HugHandler
+    Template string
+    Config Configuration
 }
 
-type jsonResponse struct {
-    Message string
+type Configuration struct {
+    Handlers map[string]HugHandler
+    Formatters map[string]Formatter
+}
+
+func declareFormatters() map[string]Formatter {
+    formatters := map[string]Formatter{
+        "html": {"text/html", func(hug HugRequest, w http.ResponseWriter) {
+            w.Header().Set("Content-Type", "text/html")
+            tmpl, err := htmlTemplate.ParseFiles(fmt.Sprintf("templates/%s.html", hug.Template))
+            if err != nil {
+                panic(err)
+            }
+            err = tmpl.Execute(w, hug)
+            if err != nil {
+                panic(err)
+            }
+        }},
+        "text": {"text/plain", func(hug HugRequest, w http.ResponseWriter) {
+            w.Header().Set("Content-Type", "text/plain")
+            tmpl, err := textTemplate.ParseFiles(fmt.Sprintf("templates/%s.text", hug.Template))
+            if err != nil {
+                panic(err)
+            }
+            err = tmpl.Execute(w, hug)
+            if err != nil {
+                panic(err)
+            }
+        }},
+        "json": {"application/json", func(hug HugRequest, w http.ResponseWriter) {
+            var writeBuffer bytes.Buffer
+            w.Header().Set("Content-Type", "application/json")
+           
+            tmpl, err := textTemplate.ParseFiles(fmt.Sprintf("templates/%s.text", hug.Template))
+            if err != nil {
+                panic(err)
+            }
+            err = tmpl.Execute(&writeBuffer, hug)
+            if err != nil {
+                panic(err)
+            }
+            encoder := json.NewEncoder(w)
+            encoder.Encode(map[string]string {
+                "message": writeBuffer.String(),
+            })
+        }},
+    }
+    return formatters
+}
+
+func declareHandlers() map[string]HugHandler {
+    handlers := map[string]HugHandler{
+        "hug": {
+            "/hug/",
+            handleGenericHug,
+            "hug",
+            2,
+        },
+        "bearhug": {
+            "/bearhug/",
+            handleGenericHug,
+            "bearhug",
+            2,
+        },
+        "hugattack": {
+            "/hugattack/",
+            handleGenericHug,
+            "hugattack",
+            1,
+        },
+        "grouphug": {
+            "/grouphug/",
+            func(hug HugRequest, w http.ResponseWriter) {
+                hug.From = parseCommaSeparatedString(hug.From)
+                hug.To = parseCommaSeparatedString(hug.To)
+                if strings.Contains(hug.From, ",") {
+                    hug.Template = "hug"
+                }
+                handleGenericHug(hug, w)
+            },
+            "grouphug",
+            2,
+        },
+    }
+    return handlers
 }
 
 func init() {
-    http.HandleFunc("/hug/", handleHug)
-    http.HandleFunc("/bearhug/", handleBearHug)
-    http.HandleFunc("/grouphug/", handleGroupHug)
-    http.HandleFunc("/hugattack/", handleHugAttack)
+    config := Configuration{declareHandlers(), declareFormatters()}
+    for _, handler := range config.Handlers {
+        http.HandleFunc(handler.Path, getHandler(handler, config))
+    }
 }
 
-func handleHug(w http.ResponseWriter, r *http.Request) {
-    names := extractNames("/hug/", r)
-    if len(names) < 2 {
-        send400(w)
-        return
+func getHandler(h HugHandler, config Configuration) func(http.ResponseWriter, *http.Request) {
+    return func(w http.ResponseWriter, r *http.Request) {
+        path := r.URL.Path[len(h.Path):]
+        names := strings.Split(path, "/")
+        if len(names) < h.MinNames {
+            w.Header().Set("Status", "400")
+            fmt.Fprintf(w, "400 Bad Request")
+            return
+        }
+        var from, to string = "", ""
+        if len(names) >= 1 {
+            to = names[0]
+        }
+        if len(names) >= 2 {
+            from = names[1]
+        }
+        hug := HugRequest{to, from, r, h, h.Template, config}
+        h.Handler(hug, w)
     }
-    hug := HugRequest{names[0], names[1], hug_Hug}
-    sendResponse(w, r, hug)
 }
 
-func handleHugAttack(w http.ResponseWriter, r *http.Request) {
-    names := extractNames("/hugattack/", r)
-    if len(names) < 1 {
-        send400(w)
-        return
-    }
-    hug := HugRequest{names[0], "", hug_HugAttack}
-    sendResponse(w, r, hug)
-}
-
-func handleGroupHug(w http.ResponseWriter, r *http.Request) {
-    names := extractNames("/grouphug/", r)
-    if len(names) < 2 {
-        send400(w)
-        return
-    }
-    to := parseCommaSeparatedString(names[0])
-    from := parseCommaSeparatedString(names[1])
-    t := hug_Hug
-    if strings.Contains(names[1], ",") {
-        t = hug_GroupHug
-    }
-    hug := HugRequest{to, from, t}
-    sendResponse(w, r, hug)
+func handleGenericHug(hug HugRequest, w http.ResponseWriter) {
+    formatter := findFormatter(hug)
+    formatter.Render(hug, w)
 }
 
 func parseCommaSeparatedString(in string) string {
@@ -86,83 +157,6 @@ func parseCommaSeparatedString(in string) string {
     parts := strings.Split(in, ",")
     list := strings.Join(parts[0:len(parts)-1], ", ")
     return fmt.Sprintf("%s and %s", list, parts[len(parts)-1])
-}
-
-func handleBearHug(w http.ResponseWriter, r *http.Request) {
-    names := extractNames("/bearhug/", r)
-    if len(names) < 2 {
-        send400(w)
-        return
-    }
-    hug := HugRequest{names[0], names[1], hug_BearHug}
-    sendResponse(w, r, hug)
-}
-
-func extractNames(stub string, r *http.Request) []string {
-    path := r.URL.Path[len(stub):]
-    names := strings.Split(path, "/")
-    return names
-}
-
-func send400(w http.ResponseWriter) {
-    w.Header().Set("Status", "400")
-    fmt.Fprintf(w, "400 Bad Request")
-}
-
-func sendResponse(w http.ResponseWriter, r *http.Request, hug HugRequest) {
-    resp := determineResponseType(r)
-    if (resp == response_JSON) {
-        sendResponseJSON(w, hug)
-        return
-    }
-    temp := getTemplateName(hug.Hug, resp)
-    executeTemplate(w, temp, hug)
-    switch resp {
-        case response_HTML:
-            w.Header().Set("Content-Type", "text/html")
-        case response_Text:
-            w.Header().Set("Content-Type", "text/plain")
-        case response_JSON:
-            
-    }
-}
-
-func sendResponseJSON(w http.ResponseWriter, hug HugRequest) {
-    var writeBuffer bytes.Buffer
-    var resp jsonResponse
-    w.Header().Set("Content-Type", "application/json")
-
-    temp := getTemplateName(hug.Hug, response_Text)
-    executeTemplate(&writeBuffer, temp, hug)
-    resp.Message = writeBuffer.String()
-    encoder := json.NewEncoder(w)
-    encoder.Encode(&resp)
-}
-
-func executeTemplate(w io.Writer, templateName string, hug HugRequest) {
-    if strings.Contains(templateName, "html") {
-        executeHTMLTemplate(w, templateName, hug)
-        return
-    }
-    tmpl, err := textTemplate.ParseFiles(templateName)
-    if err != nil {
-        panic(err)
-    }
-    err = tmpl.Execute(w, hug)
-    if err != nil {
-        panic(err)
-    }
-}
-
-func executeHTMLTemplate(w io.Writer, templateName string, hug HugRequest) {
-    tmpl, err := htmlTemplate.ParseFiles(templateName)
-    if err != nil {
-        panic(err)
-    }
-    err = tmpl.Execute(w, hug)
-    if err != nil {
-        panic(err)
-    }
 }
 
 func getHeaderOverride(header string, r *http.Request) string {
@@ -175,39 +169,15 @@ func getHeaderOverride(header string, r *http.Request) string {
     return value
 }
 
-func determineResponseType(r *http.Request) ResponseType {
-    accept := getHeaderOverride("Accept", r)
+func findFormatter(hug HugRequest) Formatter {
+    accept := getHeaderOverride("Accept", hug.Request)
     parts := strings.Split(accept, ",")
     for _, t := range parts {
-        switch {
-            case strings.Contains(t, "text/html"):
-                return response_HTML
-            case strings.Contains(t, "text/plain"):
-                return response_Text
-            case strings.Contains(t, "application/json"):
-                return response_JSON
-        } 
+        for _, h := range hug.Config.Formatters {
+            if strings.Contains(t, h.AcceptText) {
+                return h
+            }
+        }
     }
-    return response_HTML
-}
-
-func getTemplateName(hug HugType, resp ResponseType) string {
-    var resp_type, hug_type string = "", ""
-    switch resp {
-        case response_Text:
-            resp_type = "text"
-        case response_HTML:
-            resp_type = "html"
-    }
-    switch hug {
-        case hug_Hug:
-            hug_type = "hug"
-        case hug_BearHug:
-            hug_type = "bearhug"
-        case hug_GroupHug:
-            hug_type = "grouphug"
-        case hug_HugAttack:
-            hug_type = "hugattack"
-    }
-    return fmt.Sprintf("templates/%s_%s", resp_type, hug_type)  
+    return hug.Config.Formatters["html"]
 }
