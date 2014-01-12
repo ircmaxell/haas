@@ -21,14 +21,6 @@
 			<div id="hugs">
 				<script type="text/javascript">
 					(function() {
-						function get_random_color() {
- 					 	  	var letters = '0123456789ABCDEF'.split('');
-    						var color = '#';
-    						for (var i = 0; i < 6; i++ ) {
-        						color += letters[Math.round(Math.random() * 15)];
-    						}
-    						return color;
-						}
 						var hugs = document.getElementById("hugs");
 						setInterval(function() {
 							var hug = document.createElement("h" + (Math.floor(Math.random() * 5) + 1));
@@ -36,7 +28,7 @@
 							hug.style.position = "absolute";
 							hug.style.top = Math.floor(Math.random() * window.innerHeight) + "px";
 							hug.style.left = Math.floor(Math.random() * window.innerWidth) + "px";
-							hug.style.color = get_random_color();
+							hug.style.color = "#" + ("xxxxxx".split('').map(function() { return "0123456789abcdef".split('')[Math.floor(Math.random() * 16)]; }).join(''));
 							hugs.appendChild(hug);
 						}, 100);
 					})()
