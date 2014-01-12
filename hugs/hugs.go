@@ -1,6 +1,7 @@
 package main
 
 import (
+    "io"
     "bytes"
     "fmt"
     "strings"
@@ -11,8 +12,9 @@ import (
 )
 
 type Formatter struct {
-    AcceptText string
-    Render func(HugRequest, http.ResponseWriter)
+    Name string
+    ContentType string
+    Render func(HugRequest, io.Writer)
 }
 
 type HugHandler struct {
@@ -37,40 +39,11 @@ type Configuration struct {
 
 func declareFormatters() map[string]Formatter {
     formatters := map[string]Formatter{
-        "html": {"text/html", func(hug HugRequest, w http.ResponseWriter) {
-            w.Header().Set("Content-Type", "text/html")
-            tmpl, err := htmlTemplate.ParseFiles(fmt.Sprintf("templates/%s.html", hug.Template))
-            if err != nil {
-                panic(err)
-            }
-            err = tmpl.Execute(w, hug)
-            if err != nil {
-                panic(err)
-            }
-        }},
-        "text": {"text/plain", func(hug HugRequest, w http.ResponseWriter) {
-            w.Header().Set("Content-Type", "text/plain")
-            tmpl, err := textTemplate.ParseFiles(fmt.Sprintf("templates/%s.text", hug.Template))
-            if err != nil {
-                panic(err)
-            }
-            err = tmpl.Execute(w, hug)
-            if err != nil {
-                panic(err)
-            }
-        }},
-        "json": {"application/json", func(hug HugRequest, w http.ResponseWriter) {
+        "html": {"html", "text/html", renderText},
+        "text": {"text", "text/plain", renderHtml},
+        "json": {"json", "application/json", func(hug HugRequest, w io.Writer) {
             var writeBuffer bytes.Buffer
-            w.Header().Set("Content-Type", "application/json")
-           
-            tmpl, err := textTemplate.ParseFiles(fmt.Sprintf("templates/%s.text", hug.Template))
-            if err != nil {
-                panic(err)
-            }
-            err = tmpl.Execute(&writeBuffer, hug)
-            if err != nil {
-                panic(err)
-            }
+            renderText(hug, &writeBuffer)
             encoder := json.NewEncoder(w)
             encoder.Encode(map[string]string {
                 "message": writeBuffer.String(),
@@ -147,6 +120,7 @@ func getHandler(h HugHandler, config Configuration) func(http.ResponseWriter, *h
 
 func handleGenericHug(hug HugRequest, w http.ResponseWriter) {
     formatter := findFormatter(hug)
+    w.Header().Set("Content-Type", formatter.Name)
     formatter.Render(hug, w)
 }
 
@@ -174,10 +148,32 @@ func findFormatter(hug HugRequest) Formatter {
     parts := strings.Split(accept, ",")
     for _, t := range parts {
         for _, h := range hug.Config.Formatters {
-            if strings.Contains(t, h.AcceptText) {
+            if strings.Contains(t, h.ContentType) {
                 return h
             }
         }
     }
     return hug.Config.Formatters["html"]
+}
+
+func renderHtml(hug HugRequest, w io.Writer) {
+    tmpl, err := htmlTemplate.ParseFiles(fmt.Sprintf("templates/%s.html", hug.Template))
+    if err != nil {
+        panic(err)
+    }
+    err = tmpl.Execute(w, hug)
+    if err != nil {
+        panic(err)
+    }
+}
+
+func renderText(hug HugRequest, w io.Writer) {
+    tmpl, err := textTemplate.ParseFiles(fmt.Sprintf("templates/%s.text", hug.Template))
+    if err != nil {
+        panic(err)
+    }
+    err = tmpl.Execute(w, hug)
+    if err != nil {
+        panic(err)
+    }
 }
