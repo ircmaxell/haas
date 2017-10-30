@@ -35,10 +35,11 @@
 				<p>Will return content of the form ":from Sends :name A Bear Hug!!!", e.g. /bearhug/Sam/Bill will return 'Bill Sends Sam A Bear Hug!!!'</p>
 				<h3 id="grouphug">/grouphug/:tolist/:fromlist</h3>
 				<p>Will return content of the form ":tolist; :fromlist Send You A Hug!!!", parsing each argument as comma separated lists (adding commas and "and" as needed) e.g. /grouphug/Sam,Rich/Bill,Bob will return 'Sam and Rich; Bill and Bob Send You A HUG!!!'</p>
-			
+
 				<h3 id="hugattack">/hugattack/:name
 				</h3>
-				<p>Will return a page with randomly generated Hugs of random color, size and position for all time. Approximately 10 "Hugs" per second will be generated.</p>
+				<p>Will return a page with randomly generated Hugs of random color, size and position for all time. You can specify a language with a language query parameter, and hugs will be in that language! (Provided it's in languages.yml)</p>
+				<p>By default hugs will be multilingual and appear in all supported languages.</p>
 
 				<p>All contributions are very welcome</p>
 				<p>Fork me on <a href="https://github.com/ircmaxell/haas">GitHub</a></p>

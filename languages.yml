@@ -1,0 +1,11 @@
+# http://userguide.icu-project.org/locale#TOC-Language-code
+# Feel free to add your locale and translation, the more languages we have the more awesome multilingual hugs can be!
+languages:
+  de: Umarmen.
+  se: Kram!
+  da: Knus!
+  en: Hug!
+  nl: Knuffel!
+  fi: Halaa!
+  fr: Câlin!
+  it: Abbracci!

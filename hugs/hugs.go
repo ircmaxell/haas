@@ -9,7 +9,14 @@ import (
     textTemplate "text/template"
     htmlTemplate "html/template"
     "encoding/json"
+    "path/filepath"
+    "io/ioutil"
+    "gopkg.in/yaml.v2"
 )
+
+type Languages struct {
+    Languages map[string] string
+}
 
 type Formatter struct {
     Name string
@@ -27,6 +34,7 @@ type HugHandler struct {
 
 type HugRequest struct {
     To, From string
+    HugArray []string
     Request *http.Request
     Handler HugHandler
     Template string
@@ -118,7 +126,8 @@ func getHandler(h HugHandler, config Configuration) func(http.ResponseWriter, *h
         if len(names) >= 2 {
             from = names[1]
         }
-        hug := HugRequest{to, from, r, h, h.Template, config}
+
+        hug := HugRequest{to, from, getHugArray(r),r, h, h.Template, config}
         h.Handler(hug, w)
     }
 }
@@ -182,5 +191,39 @@ func getTextTemplate(hug HugRequest) TemplateExecute {
 func getHtmlTemplate(hug HugRequest) TemplateExecute {
     tmpl, err := htmlTemplate.ParseFiles(fmt.Sprintf("templates/%s.html", hug.Template))
     handleTemplateError(err)
-    return tmpl   
+    return tmpl
+}
+
+func getHugArray(r *http.Request) []string {
+    language := r.URL.Query().Get("language")
+    filename, _ := filepath.Abs("./languages.yml")
+    yamlFile, err := ioutil.ReadFile(filename)
+
+    if err != nil {
+        panic(err)
+    }
+
+    var lang Languages
+
+    err = yaml.Unmarshal(yamlFile, &lang)
+
+    if err != nil {
+        panic(err)
+    }
+
+    ha := []string{}
+
+    hs, ok := lang.Languages[language]
+
+    if ok {
+        ha = append(ha, hs)
+    }
+
+    if "" == language {
+        for _, v := range lang.Languages {
+            ha = append(ha, v)
+        }
+    }
+
+    return ha
 }
